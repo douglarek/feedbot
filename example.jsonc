@@ -1,0 +1,5 @@
+{
+    "bot_token": "", // discord or telegram bot token, required
+    "enable_debug": false, // enable debug mode, optional
+    "db_file": "feedbot.db"
+}
