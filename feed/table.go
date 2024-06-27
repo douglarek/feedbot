@@ -10,7 +10,7 @@ type FeedSubscription struct {
 	LatestItemLink string `db:"latest_item_link"` // latests feed item link
 	ChannelID      string `db:"channel_id"`
 	CreatedAt      int64  `db:"created_at"`
-	UpdatedAt      int64  `db:"updated_at"`
+	UpdatedAt      int64  `db:"updated_at"` // not record updated, but feed root updated
 }
 
 var (

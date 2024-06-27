@@ -65,7 +65,7 @@ func (f *Feeder) Subscribe(ctx context.Context, req *FeederSubscribeRequest) (*F
 	}
 	_, err = tx.InsertInto(tableName).
 		Columns("title", "link", "channel_id", "created_at", "updated_at").
-		Values(feed.Title, req.URL, req.ChannelID, now, feed.Items[0].UpdatedParsed.Unix()).ExecContext(ctx)
+		Values(feed.Title, req.URL, req.ChannelID, now, feed.UpdatedParsed.Unix()).ExecContext(ctx)
 	if err != nil {
 		if serr, ok := err.(*sqlite.Error); ok {
 			if serr.Code() == sqlite3.SQLITE_CONSTRAINT_UNIQUE {
@@ -137,15 +137,12 @@ func (f *Feeder) FindNewItems(ctx context.Context) ([]*FindNewItemsResponse, err
 
 		var newItems []FindNewItemsResponseNewItem
 		item := fd.Items[0]
-		if item.UpdatedParsed == nil {
-			item.UpdatedParsed = item.PublishedParsed
-		}
-		if item.UpdatedParsed.Unix() > row.UpdatedAt {
+		if updated := fd.UpdatedParsed.Unix(); updated > row.UpdatedAt { // use root's updated not item's
 			newItems = append(newItems, FindNewItemsResponseNewItem{
 				Title: item.Title,
 				Link:  item.Link,
 			})
-			if _, err = tx.Update(tableName).Set("updated_at", item.UpdatedParsed.Unix()).
+			if _, err = tx.Update(tableName).Set("updated_at", updated).
 				Where("link = ? AND channel_id = ?", row.Link, row.ChannelID).ExecContext(ctx); err != nil {
 				return nil, err
 			}
