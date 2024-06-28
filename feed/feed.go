@@ -63,6 +63,9 @@ func (f *Feeder) Subscribe(ctx context.Context, req *FeederSubscribeRequest) (*F
 	if feed.Items[0].UpdatedParsed == nil {
 		feed.Items[0].UpdatedParsed = feed.Items[0].PublishedParsed
 	}
+	if feed.UpdatedParsed == nil {
+		feed.UpdatedParsed = feed.Items[0].UpdatedParsed
+	}
 	_, err = tx.InsertInto(tableName).
 		Columns("title", "link", "channel_id", "created_at", "updated_at").
 		Values(feed.Title, req.URL, req.ChannelID, now, feed.UpdatedParsed.Unix()).ExecContext(ctx)
@@ -126,18 +129,24 @@ func (f *Feeder) FindNewItems(ctx context.Context) ([]*FindNewItemsResponse, err
 	var linkM = make(map[string]*gofeed.Feed) // link to feed map
 
 	for _, row := range ft { // todo concurrency
-		fd, ok := linkM[row.Link]
+		feed, ok := linkM[row.Link]
 		if !ok {
-			fd, err = f.parser.ParseURLWithContext(row.Link, ctx)
+			feed, err = f.parser.ParseURLWithContext(row.Link, ctx)
 			if err != nil {
 				return nil, err
 			}
-			linkM[row.Link] = fd
+			linkM[row.Link] = feed
 		}
 
 		var newItems []FindNewItemsResponseNewItem
-		item := fd.Items[0]
-		if updated := fd.UpdatedParsed.Unix(); updated > row.UpdatedAt { // use root's updated not item's
+		item := feed.Items[0]
+		if feed.Items[0].UpdatedParsed == nil {
+			feed.Items[0].UpdatedParsed = feed.Items[0].PublishedParsed
+		}
+		if feed.UpdatedParsed == nil {
+			feed.UpdatedParsed = feed.Items[0].UpdatedParsed
+		}
+		if updated := feed.UpdatedParsed.Unix(); updated > row.UpdatedAt { // use root's updated not item's
 			newItems = append(newItems, FindNewItemsResponseNewItem{
 				Title: item.Title,
 				Link:  item.Link,
@@ -149,7 +158,7 @@ func (f *Feeder) FindNewItems(ctx context.Context) ([]*FindNewItemsResponse, err
 		}
 
 		resp = append(resp, &FindNewItemsResponse{
-			Title:     fd.Title,
+			Title:     feed.Title,
 			Link:      row.Link,
 			ChannelID: row.ChannelID,
 			NewItems:  newItems,

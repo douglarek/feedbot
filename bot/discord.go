@@ -116,7 +116,7 @@ func discordReady(_ *discordgo.Session, r *discordgo.Ready) {
 }
 
 func checkFeed(s *discordgo.Session, f *feed.Feeder) {
-	tk := time.NewTicker(2 * time.Minute)
+	tk := time.NewTicker(1 * time.Minute)
 	for t := range tk.C {
 		resp, err := f.FindNewItems(context.TODO())
 		if err != nil {
